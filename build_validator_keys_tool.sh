@@ -32,6 +32,18 @@ while getopts ":sbc?h" opt; do
   esac
 done
 
+
+# Detect if operating system is RHEL or Debian based
+. /etc/os-release 2>/dev/null || { echo "unknown"; exit 1; }
+
+OS_FAM="unknown"
+case " $ID $ID_LIKE " in
+  *" debian "*   ) OS_FAM="debian" ;;
+  *" rhel "*|*" fedora "*|*" centos "*|*" rocky "*|*" alma "* ) OS_FAM="rhel" ;;
+esac
+
+
+# Clean existing build directories and Conan2 profiles
 if [[ $do_clean == true ]]; then
     echo "Removing existing git repos, Python3 venv, and Conan2 profile."
     rm -rf ${BASE_DIR}/${REPO_DIR}
@@ -40,19 +52,29 @@ if [[ $do_clean == true ]]; then
     echo "Cleaning complete"
 fi
 
+
+# Install software dependencies
 if [[ $do_dep_install == true ]]; then
     echo "Installing software dependencies"
-    sudo dnf install epel-release -y && sudo dnf update -y
-    sudo dnf config-manager --set-enabled powertools -y && sudo dnf update -y
-    sudo dnf module reset python36 -y
-    sudo dnf remove python36
-    sudo dnf install python311 -y
-    sudo dnf install gcc-toolset-12 curl wget ca-certificates cmake git glibc-headers glibc-devel gcc-toolset-12-gcc-c++ ninja-build -y
-    sudo dnf groupinstall "Development Tools" -y
+
+    if [[ $OS_FAM == "rhel" ]]; then
+		sudo dnf install epel-release -y && sudo dnf update -y
+		sudo dnf config-manager --set-enabled powertools -y && sudo dnf update -y
+		sudo dnf module reset python36 -y
+		sudo dnf remove python36
+		sudo dnf install python311 -y
+		sudo dnf install gcc-toolset-12 curl wget ca-certificates cmake git glibc-headers glibc-devel gcc-toolset-12-gcc-c++ ninja-build -y
+		sudo dnf groupinstall "Development Tools" -y
+
+	elif [[ $OS_FAM == "debian" ]]; then
+		sudo apt install -y git curl wget python3-pip python3-venv python3-dev ca-certificates gcc g++ build-essential cmake ninja-build libc6-dev
+	fi
+
     echo "Software install complete"
 fi
 
-# Clone the repo & install Conan
+
+# Clone the Git repo & install Conan
 cd $BASE_DIR
 git clone ${REPO_URL}
 cd $REPO_DIR
@@ -110,10 +132,12 @@ conan export --version 1.1.10 recipes/snappy/all
 conan export --version 4.0.3 recipes/soci/all
 rm -rf .git
 
+
 # Check for xrplf remote and add if needed
 conan remote list | grep -q '^xrplf:' \
   && conan remote update --url "https://conan.ripplex.io" xrplf \
   || conan remote add --index 0 xrplf "https://conan.ripplex.io"
+
 
 # build
 if [[ $do_build == true ]]; then
