@@ -23,7 +23,7 @@ do_dep_install=false
 do_build=false
 do_clean=false
 
-while getopts ":sbc?h" opt; do
+while getopts ":ibc?h" opt; do
   case $opt in
     c) do_clean=true;;
     i) do_dep_install=true ;;
@@ -117,16 +117,14 @@ fi
 # Install Conan recipes
 mkdir ${REPO_DIR}/external
 cd ${REPO_DIR}/external
-git init
-git remote add origin https://github.com/XRPLF/conan-center-index.git
-git sparse-checkout init
-git sparse-checkout set recipes/snappy
-git sparse-checkout add recipes/soci
-git fetch origin master
-git checkout master
-conan export --version 1.1.10 recipes/snappy/all
-conan export --version 4.0.3 recipes/soci/all
-rm -rf .git
+
+git submodule add "https://github.com/Xahau/xahaud" "xahaud"
+git -C "xahaud" sparse-checkout init --cone
+git -C "xahaud" sparse-checkout set "external"
+git -C "xahaud" config core.worktree "$(pwd)/xahaud"
+git -C "xahaud" checkout
+conan export ./xahaud/external/snappy --version 1.1.10 --user xahaud --channel stable
+conan export ./xahaud/external/soci --version 4.0.3 --user xahaud --channel stable
 
 
 # Check for xrplf remote and add if needed
@@ -147,3 +145,5 @@ if [[ $do_build == true ]]; then
         ..
     cmake --build .
 fi
+
+mv ${REPO_DIR}/.build/validator-keys /root/validator-keys

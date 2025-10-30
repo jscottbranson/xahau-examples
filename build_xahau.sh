@@ -7,9 +7,9 @@
 # Use "-c" to clean the install directory. This will delete the user's Conan2 profile.
 
 REPO_URL="https://github.com/Xahau/xahaud"
-REPO_BRANCH="dev"
+REPO_BRANCH="dev" # Git branch to use for the build
 RELEASE_TYPE="Release" # "Release" or "Debug"
-BASE_DIR="$HOME"
+BASE_DIR="$HOME" # Used to store the git repo and final build product
 CONAN2_DIR="${HOME}/.conan2"
 CONAN2_PROFILE="${CONAN2_DIR}/profiles/default"
 
@@ -26,7 +26,7 @@ do_dep_install=false
 do_build=false
 do_clean=false
 
-while getopts ":sbc?h" opt; do
+while getopts ":ibc?h" opt; do
   case $opt in
     c) do_clean=true;;
     i) do_dep_install=true ;;
@@ -147,3 +147,6 @@ if [[ $do_build == true ]]; then
         ..
     cmake --build .
 fi
+
+mv ${REPO_DIR}/.build/rippled ${BASE_DIR}/xahaud
+chmod 500 ${BASE_DIR}/xahaud
