@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# This has been tested on Ubuntu 24.04
+# Tested on Ubuntu
 
 # Use the "-i" flag to install dependencies
 # Use "-b" to build
 # Use "-c" to clean the install directory. This will delete the user's Conan2 profile.
 
-REPO_URL="https://github.com/jscottbranson/validator-keys-tool"
-REPO_BRANCH="xahau"
+REPO_URL="https://github.com/Xahau/xahaud"
+REPO_BRANCH="dev"
+RELEASE_TYPE="Release" # "Release" or "Debug"
 BASE_DIR="$HOME"
 CONAN2_DIR="${HOME}/.conan2"
 CONAN2_PROFILE="${CONAN2_DIR}/profiles/default"
@@ -19,6 +20,8 @@ REPO_DIR="${BASE_DIR}/${REPO_DIR}"
 set -euo pipefail
 IFS=$'\n\t'
 
+
+# Check for flags from user
 do_dep_install=false
 do_build=false
 do_clean=false
@@ -40,6 +43,7 @@ case " $ID $ID_LIKE " in
   *" debian "*   ) OS_FAM="debian" ;;
   *" rhel "*|*" fedora "*|*" centos "*|*" rocky "*|*" alma "* ) OS_FAM="rhel" ;;
 esac
+echo "Operating system detected: $OS_FAM"
 
 
 # Clean existing build directories and Conan2 profiles
@@ -64,18 +68,29 @@ if [[ $do_dep_install == true ]]; then
 		sudo dnf install gcc-toolset-12 curl wget ca-certificates cmake git glibc-headers glibc-devel gcc-toolset-12-gcc-c++ ninja-build -y
 		sudo dnf groupinstall "Development Tools" -y
 	elif [[ $OS_FAM == "debian" ]]; then
-		sudo apt install -y git curl wget python3-pip python3-venv python3-dev ca-certificates gcc g++ build-essential cmake ninja-build libc6-dev
+		sudo apt install -y -qq git curl wget python3-pip python3-venv python3-dev ca-certificates gcc g++ build-essential cmake ninja-build libc6-dev libssl-dev libsqlite3-dev
 	fi
     echo "Software install complete"
 fi
 
 
-# Clone the Git repo & install Conan
-cd $BASE_DIR
-git clone ${REPO_URL}
-cd $REPO_DIR
+# Clone the Git repo
+if [[ ! -d "$REPO_DIR" ]]; then
+	cd $BASE_DIR
+	git clone ${REPO_URL}
+	cd $REPO_DIR
+elif [[ -d "$REPO_DIR" ]]; then
+	cd $REPO_DIR
+	git pull
+fi
+
 git checkout $REPO_BRANCH
-mkdir ${REPO_DIR}/.build
+
+if [[ ! -d "${REPO_DIR}/.build" ]]; then
+	mkdir ${REPO_DIR}/.build
+fi
+
+# Setup the venv and install Conan
 python3 -m venv ${BASE_DIR}/env
 echo "
 if [ -f /opt/rh/gcc-toolset-12/enable ]; then
@@ -115,35 +130,20 @@ fi
 
 
 # Install Conan recipes
-mkdir ${REPO_DIR}/external
-cd ${REPO_DIR}/external
-git init
-git remote add origin https://github.com/XRPLF/conan-center-index.git
-git sparse-checkout init
-git sparse-checkout set recipes/snappy
-git sparse-checkout add recipes/soci
-git fetch origin master
-git checkout master
-conan export --version 1.1.10 recipes/snappy/all
-conan export --version 4.0.3 recipes/soci/all
-rm -rf .git
-
-
-# Check for xrplf remote and add if needed
-conan remote list | grep -q '^xrplf:' \
-  && conan remote update --url "https://conan.ripplex.io" xrplf \
-  || conan remote add --index 0 xrplf "https://conan.ripplex.io"
+conan export external/snappy --version 1.1.10 --user xahaud --channel stable
+conan export external/soci --version 4.0.3 --user xahaud --channel stable
+conan export external/wasmedge --version 0.11.2 --user xahaud --channel stable
 
 
 # build
 if [[ $do_build == true ]]; then
     source ${BASE_DIR}/env/bin/activate
     cd ${REPO_DIR}/.build
-    conan install .. --output-folder . --settings build_type=Release --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose -g VirtualBuildEnv -g VirtualRunEnv
-    # conan install .. --output-folder . --settings build_type=Release -s compiler=gcc -s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=20 --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose
+    conan install .. --output-folder . --settings build_type=$RELEASE_TYPE --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose -g VirtualBuildEnv -g VirtualRunEnv
+    # conan install .. --output-folder . --settings build_type=$RELEASE_TYPE -s compiler=gcc -s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=20 --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose
     cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
-        -DCMAKE_TOOLCHAIN_FILE:FILEPATH=conan_toolchain.cmake \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=$RELEASE_TYPE \
+        -DCMAKE_TOOLCHAIN_FILE:FILEPATH=build/generators/conan_toolchain.cmake \
         ..
     cmake --build .
 fi
