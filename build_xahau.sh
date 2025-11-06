@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Tested on Ubuntu
+# Tested on Ubuntu 22.04 and 24.04 as well as RHEL 9 and RHEL 10.
 
 # Use the "-i" flag to install dependencies
 # Use "-b" to build
@@ -61,12 +61,9 @@ if [[ $do_dep_install == true ]]; then
     echo "Installing software dependencies"
     if [[ $OS_FAM == "rhel" ]]; then
 		sudo dnf install epel-release -y && sudo dnf update -y
-		sudo dnf config-manager --set-enabled powertools -y && sudo dnf update -y
-		sudo dnf module reset python36 -y
-		sudo dnf remove python36
-		sudo dnf install python311 -y
-		sudo dnf install gcc-toolset-12 curl wget ca-certificates cmake git glibc-headers glibc-devel gcc-toolset-12-gcc-c++ ninja-build -y
+		sudo dnf config-manager --set-enabled crb -y
 		sudo dnf groupinstall "Development Tools" -y
+		sudo dnf install curl wget git ca-certificates cmake glibc-headers glibc-devel ninja-build perl-interpreter perl perl-FindBin sqlite-devel libstdc++ libstdc++-devel libstdc++-static gcc-c++ -y
 	elif [[ $OS_FAM == "debian" ]]; then
 		sudo apt install -y -qq git curl wget python3-pip python3-venv python3-dev ca-certificates gcc g++ build-essential cmake ninja-build libc6-dev libssl-dev libsqlite3-dev
 	fi
@@ -148,5 +145,5 @@ if [[ $do_build == true ]]; then
     cmake --build .
 fi
 
-mv ${REPO_DIR}/.build/rippled ${BASE_DIR}/xahaud
-chmod 500 ${BASE_DIR}/xahaud
+mv ${REPO_DIR}/.build/rippled ${BASE_DIR}/xahaud_built
+chmod 500 ${BASE_DIR}/xahaud_built
