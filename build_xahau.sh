@@ -1,17 +1,24 @@
 #!/bin/bash
 
+# This script downloads dependencies and xahaud, then attempts to build xahaud.
+#
 # Tested on Ubuntu 22.04 and 24.04 as well as RHEL 9 and RHEL 10.
 
 # Use the "-i" flag to install dependencies
 # Use "-b" to build
 # Use "-c" to clean the install directory. This will delete the user's Conan2 profile.
 
+#--------------------------------------------------------------------------------------
+#				VARIABLES
+#--------------------------------------------------------------------------------------
 REPO_URL="https://github.com/Xahau/xahaud"
 REPO_BRANCH="dev" # Git branch to use for the build
 RELEASE_TYPE="Release" # "Release" or "Debug"
 BASE_DIR="$HOME" # Used to store the git repo and final build product
 CONAN2_DIR="${HOME}/.conan2"
 CONAN2_PROFILE="${CONAN2_DIR}/profiles/default"
+
+#--------------------------------------------------------------------------------------
 
 REPO_DIR="${REPO_URL##*/}"
 REPO_DIR="${REPO_DIR%.git}"
@@ -62,7 +69,7 @@ if [[ $do_dep_install == true ]]; then
     if [[ $OS_FAM == "rhel" ]]; then
 		sudo dnf install epel-release -y && sudo dnf update -y
 		sudo dnf config-manager --set-enabled crb -y
-		sudo dnf groupinstall "Development Tools" -y
+		sudo dnf groupinstall "Development Tools" -y && sudo dnf update -y
 		sudo dnf install curl wget git ca-certificates cmake glibc-headers glibc-devel ninja-build perl-interpreter perl perl-FindBin sqlite-devel libstdc++ libstdc++-devel libstdc++-static gcc-c++ -y
 	elif [[ $OS_FAM == "debian" ]]; then
 		sudo apt install -y -qq git curl wget python3-pip python3-venv python3-dev ca-certificates gcc g++ build-essential cmake ninja-build libc6-dev libssl-dev libsqlite3-dev

@@ -57,7 +57,7 @@ if [[ $do_dep_install == true ]]; then
     echo "Installing software dependencies"
     if [[ $OS_FAM == "rhel" ]]; then
 		sudo dnf install epel-release -y && sudo dnf update -y
-		sudo dnf config-manager --set-enabled crb -y
+		sudo dnf config-manager --set-enabled crb -y && sudo dnf update -y
 		sudo dnf groupinstall "Development Tools" -y
 		sudo dnf install curl wget git ca-certificates cmake glibc-headers glibc-devel ninja-build perl-interpreter perl perl-FindBin sqlite-devel libstdc++ libstdc++-devel libstdc++-static gcc-c++ -y
 	elif [[ $OS_FAM == "debian" ]]; then
@@ -68,9 +68,15 @@ fi
 
 
 # Clone the Git repo & install Conan
-cd $BASE_DIR
-git clone ${REPO_URL}
-cd $REPO_DIR
+if [[ ! -d "${REPO_DIR}" ]]; then
+	cd $BASE_DIR
+	git clone ${REPO_URL}
+	cd $REPO_DIR
+elif [[ -d "${REPO_DIR}" ]]; then
+	cd $REPO_DIR
+	git pull
+fi
+
 git checkout $REPO_BRANCH
 mkdir ${REPO_DIR}/.build
 python3 -m venv ${BASE_DIR}/env
@@ -120,6 +126,7 @@ git -C "xahaud" sparse-checkout init --cone
 git -C "xahaud" sparse-checkout set "external"
 git -C "xahaud" config core.worktree "$(pwd)/xahaud"
 git -C "xahaud" checkout
+
 conan export ./xahaud/external/snappy --version 1.1.10 --user xahaud --channel stable
 conan export ./xahaud/external/soci --version 4.0.3 --user xahaud --channel stable
 
@@ -143,4 +150,4 @@ if [[ $do_build == true ]]; then
     cmake --build .
 fi
 
-mv ${REPO_DIR}/.build/validator-keys /root/validator-keys
+mv ${REPO_DIR}/.build/validator-keys /${BASE_DIR}/validator-keys-portable
