@@ -148,6 +148,7 @@ if [[ $do_build == true ]]; then
         -DCMAKE_BUILD_TYPE=Release \
         ..
     cmake --build .
+
+	mv ${REPO_DIR}/.build/validator-keys /${BASE_DIR}/validator-keys-portable
 fi
 
-mv ${REPO_DIR}/.build/validator-keys /${BASE_DIR}/validator-keys-portable

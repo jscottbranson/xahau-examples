@@ -7,6 +7,7 @@
 # Use the "-i" flag to install dependencies
 # Use "-b" to build
 # Use "-c" to clean the install directory. This will delete the user's Conan2 profile.
+# Use "-d" to download the example configuration and trusted validators files.
 
 #--------------------------------------------------------------------------------------
 #				VARIABLES
@@ -32,12 +33,14 @@ IFS=$'\n\t'
 do_dep_install=false
 do_build=false
 do_clean=false
+do_configs=false
 
-while getopts ":ibc?h" opt; do
+while getopts ":ibcd?h" opt; do
   case $opt in
     c) do_clean=true;;
     i) do_dep_install=true ;;
     b) do_build=true;;
+	d) do_configs=true;;
     h|\?) usage; exit 0 ;;
   esac
 done
@@ -150,7 +153,14 @@ if [[ $do_build == true ]]; then
         -DCMAKE_TOOLCHAIN_FILE:FILEPATH=build/generators/conan_toolchain.cmake \
         ..
     cmake --build .
-fi
-
 mv ${REPO_DIR}/.build/rippled ${BASE_DIR}/xahaud_built
 chmod 500 ${BASE_DIR}/xahaud_built
+
+fi
+
+if [[ $do_configs == true ]]; then
+	wget -O ${BASE_DIR}/xahaud.cfg https://raw.githubusercontent.com/Xahau/xahaud/refs/heads/dev/cfg/xahaud-example.cfg
+	wget -O ${BASE_DIR}/validators-xahau.txt https://raw.githubusercontent.com/Xahau/xahaud/refs/heads/dev/cfg/validators-example.txt
+fi
+
+
