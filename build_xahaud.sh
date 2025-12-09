@@ -146,10 +146,11 @@ conan export external/wasmedge --version 0.11.2 --user xahaud --channel stable
 if [[ $do_build == true ]]; then
     source ${BASE_DIR}/env/bin/activate
     cd ${REPO_DIR}/.build
-    conan install .. --output-folder . --settings build_type=$RELEASE_TYPE --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose -g VirtualBuildEnv -g VirtualRunEnv
-    # conan install .. --output-folder . --settings build_type=$RELEASE_TYPE -s compiler=gcc -s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=20 --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose
+    conan install .. --output-folder . --settings build_type=$RELEASE_TYPE --options *:shared=False --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose -g VirtualBuildEnv -g VirtualRunEnv
+    # conan install .. --output-folder . --settings build_type=$RELEASE_TYPE --options *:shared=False -s compiler=gcc -s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=20 --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose
     cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
         -DCMAKE_BUILD_TYPE=$RELEASE_TYPE \
+        -DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_TOOLCHAIN_FILE:FILEPATH=build/generators/conan_toolchain.cmake \
         ..
     cmake --build .

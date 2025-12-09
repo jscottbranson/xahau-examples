@@ -141,9 +141,10 @@ conan remote list | grep -q '^xrplf:' \
 if [[ $do_build == true ]]; then
     source ${BASE_DIR}/env/bin/activate
     cd ${REPO_DIR}/.build
-    conan install .. --output-folder . --settings build_type=Release --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose -g VirtualBuildEnv -g VirtualRunEnv
+    conan install .. --output-folder . --settings build_type=Release --options *:shared=False --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose -g VirtualBuildEnv -g VirtualRunEnv
     # conan install .. --output-folder . --settings build_type=Release -s compiler=gcc -s compiler.version=12 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=20 --build missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose
     cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
+    	-DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_TOOLCHAIN_FILE:FILEPATH=conan_toolchain.cmake \
         -DCMAKE_BUILD_TYPE=Release \
         ..
