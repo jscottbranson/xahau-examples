@@ -155,7 +155,7 @@ if [[ $do_build == true ]]; then
         -DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_TOOLCHAIN_FILE:FILEPATH=build/generators/conan_toolchain.cmake \
         ..
-    cmake --build .
+	cmake --build . --parallel $(nproc)
 mv ${REPO_DIR}/.build/rippled ${BASE_DIR}/xahaud_built
 chmod 500 ${BASE_DIR}/xahaud_built
 
@@ -164,5 +164,5 @@ fi
 if [[ $do_configs == true ]]; then
 	wget -O ${BASE_DIR}/xahaud.cfg ${CONFIG_URL}
 	wget -O ${BASE_DIR}/validators-xahau.txt ${VALIDATORS_URL}
-	chmod 755 ${BASE_DIR}/xahaud.cfg ${BASE_DIR}/validators-xahau.txt
+	chmod 640 ${BASE_DIR}/xahaud.cfg ${BASE_DIR}/validators-xahau.txt
 fi

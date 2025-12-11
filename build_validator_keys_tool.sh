@@ -148,7 +148,7 @@ if [[ $do_build == true ]]; then
         -DCMAKE_TOOLCHAIN_FILE:FILEPATH=conan_toolchain.cmake \
         -DCMAKE_BUILD_TYPE=Release \
         ..
-    cmake --build .
+	cmake --build . --parallel $(nproc)
 
 	mv ${REPO_DIR}/.build/validator-keys /${BASE_DIR}/validator-keys-portable
 fi
