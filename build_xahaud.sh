@@ -18,6 +18,8 @@ RELEASE_TYPE="Release" # "Release" or "Debug"
 BASE_DIR="$HOME" # Used to store the git repo and final build product
 CONAN2_DIR="${HOME}/.conan2"
 CONAN2_PROFILE="${CONAN2_DIR}/profiles/default"
+CONFIG_URL="https://raw.githubusercontent.com/Xahau/xahaud/refs/heads/dev/cfg/xahaud-example.cfg"
+VALIDATORS_URL="https://raw.githubusercontent.com/Xahau/xahaud/refs/heads/dev/cfg/validators-example.txt"
 
 #--------------------------------------------------------------------------------------
 
@@ -160,8 +162,7 @@ chmod 500 ${BASE_DIR}/xahaud_built
 fi
 
 if [[ $do_configs == true ]]; then
-	wget -O ${BASE_DIR}/xahaud.cfg https://raw.githubusercontent.com/Xahau/xahaud/refs/heads/dev/cfg/xahaud-example.cfg
-	wget -O ${BASE_DIR}/validators-xahau.txt https://raw.githubusercontent.com/Xahau/xahaud/refs/heads/dev/cfg/validators-example.txt
+	wget -O ${BASE_DIR}/xahaud.cfg ${CONFIG_URL}
+	wget -O ${BASE_DIR}/validators-xahau.txt ${VALIDATORS_URL}
+	chmod 755 ${BASE_DIR}/xahaud.cfg ${BASE_DIR}/validators-xahau.txt
 fi
-
-
