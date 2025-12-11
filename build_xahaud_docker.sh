@@ -1,0 +1,162 @@
+# This multistage Dockerfile is used to build xahaud, then either export the image to the underlying OS or create
+# A Docker image. Docker buildx is required.
+
+# Export images to base OS:	`docker buildx build --target export --output type=local,dest=$HOME .`
+# Create a docker image:	`docker buildx build --target runtime --load -t xahaud:latest .`
+
+
+# ~~~~ Arguments used to customize the container and build ~~~~
+ARG BASE_IMAGE=ubuntu:24.04                     # Operating system for the build container
+ARG REPO_URL=https://github.com/Xahau/xahaud    # URL for the repository with the code to be compiled
+ARG REPO_BRANCH=dev                             # Repository branch that will be used for the build
+ARG RELEASE_TYPE=Release                        # Set to "Release" or "Debug"
+ARG BASE_DIR=/build                             # Directory to build xahaud in
+
+# ~~~~ Initiate a container ~~~~
+FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS builder
+
+ARG REPO_URL
+ARG REPO_BRANCH
+ARG RELEASE_TYPE
+ARG BASE_DIR
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    CONAN2_DIR=/root/.conan2
+
+# ~~~~ Install build dependencies ~~~~
+RUN set -ex; \
+    if [ -f /etc/os-release ]; then . /etc/os-release; fi; \
+    case " $ID $ID_LIKE " in \
+        *debian*|*ubuntu*) \
+            apt-get update && apt-get install -y -qq \
+                git curl wget python3-pip python3-venv python3-dev ca-certificates \
+                gcc g++ build-essential cmake ninja-build \
+                libc6-dev libssl-dev libsqlite3-dev \
+            && rm -rf /var/lib/apt/lists/* \
+            ;; \
+        *rhel*|*fedora*|*centos*|*rocky*|*alma*) \
+            dnf install -y config-manager epel-release && dnf update -y && \
+            dnf config-manager --set-enabled crb -y && \
+            dnf groupinstall -y "Development Tools" && \
+            dnf install -y curl wget git ca-certificates cmake glibc-headers glibc-devel \
+                ninja-build perl-interpreter perl perl-FindBin sqlite-devel \
+                libstdc++ libstdc++-devel libstdc++-static gcc-c++ python3-pip python3-devel \
+            && dnf clean all \
+            ;; \
+        *) echo "Unsupported OS"; exit 1 ;; \
+    esac
+
+# ~~~~ Clone the xahaud GitHub repository and create a '.build' directory ~~~~
+WORKDIR ${BASE_DIR}
+RUN git clone ${REPO_URL} xahaud && \
+    cd xahaud && \
+    git checkout ${REPO_BRANCH} && \
+    mkdir -p .build
+
+# ~~~~ Create a Python3 virtual environment and install Conan2 ~~~~
+RUN python3 -m venv ${BASE_DIR}/env && \
+    . ${BASE_DIR}/env/bin/activate && \
+    pip install --upgrade pip && \
+    pip install conan
+
+# ~~~~ Configure Conan2 profile (the following assumes the user wishes to use cppstd version 20) ~~~~
+RUN . ${BASE_DIR}/env/bin/activate && \
+    conan profile detect && \
+    CONAN2_PROFILE="${CONAN2_DIR}/profiles/default" && \
+    if grep -q '^compiler\.cppstd=' "$CONAN2_PROFILE"; then \
+        sed -i 's/^compiler\.cppstd=.*/compiler.cppstd=20/' "$CONAN2_PROFILE"; \
+    else \
+        echo 'compiler.cppstd=20' >> "$CONAN2_PROFILE"; \
+    fi && \
+    if ! grep -Fqx "[conf]" "$CONAN2_PROFILE"; then \
+        printf "[conf]\ntools.build:cxxflags=['-Wno-restrict']\n" >> "$CONAN2_PROFILE"; \
+    fi
+
+# ~~~~ Export Conan recipies for snappy, soci, and wasmedge ~~~~
+RUN . ${BASE_DIR}/env/bin/activate && \
+    cd ${BASE_DIR}/xahaud && \
+    conan export external/snappy --version 1.1.10 --user xahaud --channel stable && \
+    conan export external/soci --version 4.0.3 --user xahaud --channel stable && \
+    conan export external/wasmedge --version 0.11.2 --user xahaud --channel stable
+
+# ~~~~ Build xahaud ~~~~
+RUN . ${BASE_DIR}/env/bin/activate && \
+    cd ${BASE_DIR}/xahaud/.build && \
+    conan install .. --output-folder . \
+        --settings build_type=${RELEASE_TYPE} \
+        --options *:shared=False \
+        --build missing \
+        -c tools.build:verbosity=verbose \
+        -c tools.compilation:verbosity=verbose \
+        -g VirtualBuildEnv \
+        -g VirtualRunEnv && \
+    cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
+        -DCMAKE_BUILD_TYPE=${RELEASE_TYPE} \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
+        -DCMAKE_TOOLCHAIN_FILE:FILEPATH=build/generators/conan_toolchain.cmake \
+        .. && \
+    cmake --build . --parallel $(nproc)
+
+# ~~~~ Copy the config files to the BASE_DIR ~~~~
+RUN cp ${BASE_DIR}/xahaud/cfg/xahaud-example.cfg ${BASE_DIR}/xahaud.cfg && \
+    cp ${BASE_DIR}/xahaud/cfg/validators-example.txt ${BASE_DIR}/validators-xahau.txt && \
+    cp ${BASE_DIR}/xahaud/.build/rippled ${BASE_DIR}/rippled
+
+
+
+# ~~~~ Copy the xahaud.cfg and validators-xahau.txt files into the host OS ~~~~
+FROM scratch AS export
+ARG BASE_DIR
+
+COPY --from=builder ${BASE_DIR}/rippled /xahaud
+COPY --from=builder ${BASE_DIR}/xahaud.cfg /xahaud.cfg
+COPY --from=builder ${BASE_DIR}/validators-xahau.txt /validators-xahau.txt
+
+
+
+# ~~~~ Create a Docker image with xahaud and configuration files ~~~~
+FROM ${BASE_IMAGE} AS runtime
+ARG BASE_DIR
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ~~~~ Install runtime dependencies ~~~~
+RUN set -ex; \
+    if [ -f /etc/os-release ]; then . /etc/os-release; fi; \
+    case " $ID $ID_LIKE " in \
+        *debian*|*ubuntu*) \
+            apt-get update && apt-get install -y -qq \
+                libssl3 libsqlite3-0 ca-certificates \
+            && update-ca-certificates \
+            && rm -rf /var/lib/apt/lists/* \
+            ;; \
+        *rhel*|*fedora*|*centos*|*rocky*|*alma*) \
+            dnf install -y openssl-libs sqlite-libs ca-certificates \
+            && dnf clean all && update-ca-trust \
+            ;; \
+    esac
+
+# ~~~~ Copy built binary and configs from builder ~~~~
+RUN mkdir -p /opt/xahaud/etc /opt/xahaud/bin /opt/xahaud/db /var/log/xahaud
+COPY --from=builder ${BASE_DIR}/rippled /opt/xahaud/bin/xahaud
+COPY --from=builder ${BASE_DIR}/xahaud.cfg /opt/xahaud/etc/xahaud.cfg
+COPY --from=builder ${BASE_DIR}/validators-xahau.txt /opt/xahaud/etc/validators-xahau.txt
+
+# ~~~~ Create dicrectories and copy required shared libraries from builder ~~~~
+RUN --mount=type=bind,from=builder,source=/root/.conan2,target=/tmp/conan \
+    find /tmp/conan -name "*.so*" -type f -exec cp {} /usr/local/lib/ \; && \
+    ldconfig
+
+# ~~~~ Set permissions ~~~~
+RUN chmod -R 755 /opt/xahaud /var/log/xahaud
+
+WORKDIR /opt/xahaud
+
+# ~~~~ Expose ports ~~~~
+EXPOSE 5009 6009 50051 21337 21338
+
+# ~~~~ Run xahaud ~~~~
+ENTRYPOINT ["/opt/xahaud/bin/xahaud"]
+CMD ["--conf", "/opt/xahaud/etc/xahaud.cfg"]
