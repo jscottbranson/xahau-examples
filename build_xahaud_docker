@@ -1,5 +1,6 @@
 # This multistage Dockerfile is used to build xahaud, then either export the image to the underlying OS or create
 # A Docker image. Docker buildx is required.
+# Rename this file to "Dockerfile" before use.
 
 # Export images to base OS:	`docker buildx build --target export --output type=local,dest=$HOME .`
 # Create a docker image:	`docker buildx build --target runtime --load -t xahaud:latest .`
