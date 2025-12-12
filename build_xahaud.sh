@@ -77,6 +77,7 @@ if [[ $do_dep_install == true ]]; then
 		sudo dnf groupinstall "Development Tools" -y && sudo dnf update -y
 		sudo dnf install curl wget git ca-certificates cmake glibc-headers glibc-devel ninja-build perl-interpreter perl perl-FindBin sqlite-devel libstdc++ libstdc++-devel libstdc++-static gcc-c++ -y
 	elif [[ $OS_FAM == "debian" ]]; then
+		sudo apt update -y
 		sudo apt install -y -qq git curl wget python3-pip python3-venv python3-dev ca-certificates gcc g++ build-essential cmake ninja-build libc6-dev libssl-dev libsqlite3-dev
 	fi
     echo "Software install complete"

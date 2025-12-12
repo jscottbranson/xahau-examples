@@ -1,7 +1,7 @@
 # xahau-examples
 This repo contains example scripts, files, binares, and more for interacting with the Xahau Network and xahaud.
 
-Scripts starting with "build_" are used to compile xahaud, the validator tools, or other software.
+Scripts starting with "build_" are used to compile xahaud, the validator tools, or other software. `build_xahaud.sh` and `build_validator_keys_tool.sh` can be used on Debian or RHEL based Linux distros to automatically build either xahaud or the validator keys tool. `build_xahaud_docker.multistage` is a multistage Dockerfile for building xahaud then creating a Docker image file, which can be used to run xahaud.
 
 
 ## Validator Keys Tool
