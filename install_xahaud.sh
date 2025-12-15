@@ -13,6 +13,7 @@
 #### Directory structure ####
 XAHAUD_DIR="/opt/xahaud/bin/"	# Path where xahaud binary will be stored
 CONF_DIR="/opt/xahaud/etc/"		# Path where the xahaud.cfg and validators-xahau.txt will be stored
+DB_DIR="/opt/xahaud/db/"		# Path where xahaud will store databases
 LOG_DIR="/var/log/xahaud/"		# Path where logfile(s) will be stored.
 
 #### Ownership ####
@@ -37,7 +38,7 @@ fi
 
 ### CREATE DIRECTORIES ####
 echo "Checking directory structure."
-sudo mkdir -p ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
+sudo mkdir -p ${XAHAUD_DIR} ${CONF_DIR} ${DB_DIR} ${LOG_DIR}
 
 ### CREATE xahaud GROUP AND USER ###
 echo "Checking for user and group."
@@ -69,13 +70,13 @@ fi
 
 ### CHANGE OWNERSHIP AND PERMISSIONS ###
 echo "Checking ownership and permissions."
-chown -R ${XAHAUD_USER}:${XAHAUD_USER} ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
-chmod -R 750 ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
+chown -R ${XAHAUD_USER}:${XAHAUD_USER} ${XAHAUD_DIR} ${CONF_DIR} ${DB_DIR} ${LOG_DIR}
+chmod -R 750 ${XAHAUD_DIR} ${CONF_DIR} ${DB_DIR} ${LOG_DIR}
 
 ### Install systemd SERVICE FILE ###
 if [[ ! -f "/etc/systemd/system/xahaud.service" ]]; then
 echo "Installing system service file."
-sudo tee /etc/systemd/system/xahaud.service > /dev/null <<EOF
+sudo cat > /etc/systemd/system/xahaud.service <<EOF
 [Unit]
 Description=Xahaud Daemon
 After=network-online.target
@@ -83,10 +84,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=${XAHAUD_DIR}xahaud --silent --conf ${CONF_DIR}xahaud.cfg
+ExecStart=${XAHAUD_DIR}xahaud --silent --conf=${CONF_DIR}xahaud.cfg
 Restart=on-failure
-User=xahaud
-Group=xahaud
+User=${XAHAUD_USER}
+Group=${XAHAUD_USER}
 LimitNOFILE=65536
 
 [Install]
