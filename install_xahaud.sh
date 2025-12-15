@@ -96,13 +96,16 @@ EOF
 fi
 
 ### RUN COMMANDS AS 'xahaud' ###
-sudo cat /usr/local/bin/xahaud <<EOF
+if [[ ! -f "/usr/local/bin/xahaud" ]]; then
+echo "Creating xahaud wrapper."
+sudo cat > /usr/local/bin/xahaud <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
 exec ${XAHAUD_DIR}xahaud --conf=${CONF_DIR}xahaud.cfg "$@"
 EOF
 sudo chmod 0755 /usr/local/bin/xahaud
+fi
 
 ### ENABLE xahaud ###
 sudo systemctl daemon-reload
