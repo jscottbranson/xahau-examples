@@ -83,7 +83,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/path/to/xahaud --silent --conf /path/to/xahaud.cfg
+ExecStart=${XAHAUD_DIR}xahaud --silent --conf ${CONF_DIR}xahaud.cfg
 Restart=on-failure
 User=xahaud
 Group=xahaud
