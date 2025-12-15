@@ -73,7 +73,7 @@ echo "Checking ownership and permissions."
 chown -R ${XAHAUD_USER}:${XAHAUD_USER} ${XAHAUD_DIR} ${CONF_DIR} ${DB_DIR} ${LOG_DIR}
 chmod -R 750 ${XAHAUD_DIR} ${CONF_DIR} ${DB_DIR} ${LOG_DIR}
 
-### Install systemd SERVICE FILE ###
+### INSTALL systemd SERVICE FILE ###
 if [[ ! -f "/etc/systemd/system/xahaud.service" ]]; then
 echo "Installing system service file."
 sudo cat > /etc/systemd/system/xahaud.service <<EOF
@@ -95,6 +95,16 @@ WantedBy=multi-user.target
 EOF
 fi
 
+### RUN COMMANDS AS 'xahaud' ###
+sudo cat /usr/local/bin/xahaud <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec ${XAHAUD_DIR}xahaud --conf=${CONF_DIR}xahaud.cfg "$@"
+EOF
+sudo chmod 0755 /usr/local/bin/xahaud
+
+### ENABLE xahaud ###
 sudo systemctl daemon-reload
 sudo systemctl stop xahaud
 sudo systemctl enable --now xahaud
