@@ -36,9 +36,11 @@ if [[ "$EUID" -ne 0 ]]; then
 fi
 
 ### CREATE DIRECTORIES ####
+echo "Checking directory structure."
 sudo mkdir -p ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
 
 ### CREATE xahaud GROUP AND USER ###
+echo "Checking for user and group."
 if ! getent group ${XAHAUD_USER} > /dev/null; then
 	groupadd --system ${XAHAUD_USER}
 fi
@@ -48,6 +50,7 @@ if ! getent passwd ${XAHAUD_USER} > /dev/null; then
 fi
 
 ### DOWNLOAD CONFIGURATION FILES ###
+echo "Downloading files."
 if [[ ! -f "${CONF_DIR}xahaud.cfg" ]]; then
 	curl -fsSL ${CFG_URL} -o ${CONF_DIR}xahaud.cfg
 fi
@@ -65,11 +68,13 @@ elif [[ -f "${XAHAUD_DIR}xahaud" ]]; then
 fi
 
 ### CHANGE OWNERSHIP AND PERMISSIONS ###
+echo "Checking ownership and permissions."
 chown -R ${XAHAUD_USER}:${XAHAUD_USER} ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
 chown -R 750 ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
 
 ### Install systemd SERVICE FILE ###
 if [[ ! -f "/etc/systemd/system/xahaud.service" ]]; then
+echo "Installing system service file."
 sudo tee /etc/systemd/system/xahaud.service > /dev/null <<'EOF'
 [Unit]
 Description=Xahaud Daemon
@@ -92,3 +97,5 @@ fi
 systemctl daemon-reload
 systemctl stop xahaud
 systemctl enable --now xahaud
+systemctl status xahaud
+echo "The install script completed successfully."
