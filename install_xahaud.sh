@@ -54,7 +54,7 @@ echo "Downloading files."
 if [[ ! -f "${CONF_DIR}xahaud.cfg" ]]; then
 	curl -fsSL ${CFG_URL} -o ${CONF_DIR}xahaud.cfg
 fi
-if [[ ! -f "${CONF_DIR}validator-xahau.txt" ]]; then
+if [[ ! -f "${CONF_DIR}validators-xahau.txt" ]]; then
 	curl -fsSL ${VAL_URL} -o ${CONF_DIR}validators-xahau.txt
 fi
 
@@ -70,12 +70,12 @@ fi
 ### CHANGE OWNERSHIP AND PERMISSIONS ###
 echo "Checking ownership and permissions."
 chown -R ${XAHAUD_USER}:${XAHAUD_USER} ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
-chown -R 750 ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
+chmod -R 750 ${XAHAUD_DIR} ${CONF_DIR} ${LOG_DIR}
 
 ### Install systemd SERVICE FILE ###
 if [[ ! -f "/etc/systemd/system/xahaud.service" ]]; then
 echo "Installing system service file."
-sudo tee /etc/systemd/system/xahaud.service > /dev/null <<'EOF'
+sudo tee /etc/systemd/system/xahaud.service > /dev/null <<EOF
 [Unit]
 Description=Xahaud Daemon
 After=network-online.target
@@ -94,8 +94,8 @@ WantedBy=multi-user.target
 EOF
 fi
 
-systemctl daemon-reload
-systemctl stop xahaud
-systemctl enable --now xahaud
-systemctl status xahaud
+sudo systemctl daemon-reload
+sudo systemctl stop xahaud
+sudo systemctl enable --now xahaud
+sudo systemctl status xahaud
 echo "The install script completed successfully."
